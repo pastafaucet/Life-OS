@@ -2,22 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-
-// Task interface
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'inbox' | 'next_action' | 'in_progress' | 'done';
-  priority: 'P1' | 'P2' | 'P3' | 'deadline';
-  do_date?: string;
-  due_date?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { useData, Task, Case, Project } from '../../lib/dataContext';
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { 
+    tasks, 
+    cases, 
+    projects, 
+    addTask, 
+    updateTask, 
+    deleteTask, 
+    getCaseById, 
+    getProjectById 
+  } = useData();
+  
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -25,47 +23,70 @@ export default function TasksPage() {
     title: '',
     description: '',
     priority: 'P2' as Task['priority'],
-    due_date: ''
+    do_date: '',
+    do_time: '',
+    due_date: '',
+    case_ids: [] as string[],
+    project_ids: [] as string[]
   });
+
+  const [showParseHint, setShowParseHint] = useState(false);
   const [editTask, setEditTask] = useState({
     title: '',
     description: '',
     priority: 'P2' as Task['priority'],
-    due_date: ''
+    do_date: '',
+    do_time: '',
+    due_date: '',
+    case_ids: [] as string[],
+    project_ids: [] as string[]
   });
 
+  // Handle title input - simple text input
+  const handleTitleChange = (value: string) => {
+    setNewTask(prev => ({
+      ...prev,
+      title: value
+    }));
+  };
+
   // Add new task
-  const addTask = () => {
+  const handleAddTask = () => {
     if (!newTask.title.trim()) return;
 
-    const task: Task = {
-      id: Date.now().toString(),
+    addTask({
       title: newTask.title,
       description: newTask.description,
       status: 'inbox',
       priority: newTask.priority,
+      do_date: newTask.do_date || undefined,
+      do_time: newTask.do_time || undefined,
       due_date: newTask.due_date || undefined,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+      case_ids: newTask.case_ids,
+      project_ids: newTask.project_ids
+    });
 
-    setTasks([task, ...tasks]);
-    setNewTask({ title: '', description: '', priority: 'P2', due_date: '' });
+    setNewTask({ 
+      title: '', 
+      description: '', 
+      priority: 'P2', 
+      do_date: '',
+      do_time: '',
+      due_date: '', 
+      case_ids: [], 
+      project_ids: [] 
+    });
     setShowAddForm(false);
   };
 
   // Update task status
   const updateTaskStatus = (taskId: string, status: Task['status']) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId 
-        ? { ...task, status, updated_at: new Date().toISOString() }
-        : task
-    ));
+    updateTask(taskId, { status });
   };
 
   // Delete task
-  const deleteTask = (taskId: string) => {
-    setTasks(tasks.filter(task => task.id !== taskId));
+  const handleDeleteTask = (taskId: string) => {
+    deleteTask(taskId);
   };
 
   // Start editing task
@@ -75,7 +96,11 @@ export default function TasksPage() {
       title: task.title,
       description: task.description || '',
       priority: task.priority,
-      due_date: task.due_date || ''
+      do_date: task.do_date || '',
+      do_time: task.do_time || '',
+      due_date: task.due_date || '',
+      case_ids: task.case_ids || [],
+      project_ids: task.project_ids || []
     });
     setShowEditForm(true);
   };
@@ -84,29 +109,69 @@ export default function TasksPage() {
   const saveEditTask = () => {
     if (!editTask.title.trim() || !editingTask) return;
 
-    setTasks(tasks.map(task => 
-      task.id === editingTask.id 
-        ? { 
-            ...task, 
-            title: editTask.title,
-            description: editTask.description,
-            priority: editTask.priority,
-            due_date: editTask.due_date || undefined,
-            updated_at: new Date().toISOString()
-          }
-        : task
-    ));
+    updateTask(editingTask.id, {
+      title: editTask.title,
+      description: editTask.description,
+      priority: editTask.priority,
+      do_date: editTask.do_date || undefined,
+      do_time: editTask.do_time || undefined,
+      due_date: editTask.due_date || undefined,
+      case_ids: editTask.case_ids,
+      project_ids: editTask.project_ids
+    });
     
     setShowEditForm(false);
     setEditingTask(null);
-    setEditTask({ title: '', description: '', priority: 'P2', due_date: '' });
+    setEditTask({ 
+      title: '', 
+      description: '', 
+      priority: 'P2', 
+      do_date: '',
+      do_time: '',
+      due_date: '', 
+      case_ids: [], 
+      project_ids: [] 
+    });
   };
 
   // Cancel edit
   const cancelEdit = () => {
     setShowEditForm(false);
     setEditingTask(null);
-    setEditTask({ title: '', description: '', priority: 'P2', due_date: '' });
+    setEditTask({ 
+      title: '', 
+      description: '', 
+      priority: 'P2', 
+      do_date: '',
+      do_time: '',
+      due_date: '', 
+      case_ids: [], 
+      project_ids: [] 
+    });
+  };
+
+  // Handle case selection (multi-select)
+  const handleCaseSelection = (caseId: string, isNewTask: boolean = true) => {
+    const currentTask = isNewTask ? newTask : editTask;
+    const setCurrentTask = isNewTask ? setNewTask : setEditTask;
+    
+    const updatedCaseIds = currentTask.case_ids.includes(caseId)
+      ? currentTask.case_ids.filter(id => id !== caseId)
+      : [...currentTask.case_ids, caseId];
+    
+    setCurrentTask({ ...currentTask, case_ids: updatedCaseIds });
+  };
+
+  // Handle project selection (multi-select)
+  const handleProjectSelection = (projectId: string, isNewTask: boolean = true) => {
+    const currentTask = isNewTask ? newTask : editTask;
+    const setCurrentTask = isNewTask ? setNewTask : setEditTask;
+    
+    const updatedProjectIds = currentTask.project_ids.includes(projectId)
+      ? currentTask.project_ids.filter(id => id !== projectId)
+      : [...currentTask.project_ids, projectId];
+    
+    setCurrentTask({ ...currentTask, project_ids: updatedProjectIds });
   };
 
   // Get priority color
@@ -127,6 +192,15 @@ export default function TasksPage() {
       case 'in_progress': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'done': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
     }
+  };
+
+  // Helper functions to get linked data
+  const getLinkedCases = (caseIds: string[]): Case[] => {
+    return caseIds.map(id => getCaseById(id)).filter(Boolean) as Case[];
+  };
+
+  const getLinkedProjects = (projectIds: string[]): Project[] => {
+    return projectIds.map(id => getProjectById(id)).filter(Boolean) as Project[];
   };
 
   // Filter tasks by status
@@ -186,7 +260,7 @@ export default function TasksPage() {
         {/* Add Task Form */}
         {showAddForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Add New Task</h3>
               
               <div className="space-y-4">
@@ -197,7 +271,7 @@ export default function TasksPage() {
                   <input
                     type="text"
                     value={newTask.title}
-                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    onChange={(e) => handleTitleChange(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                     placeholder="Enter task title..."
                   />
@@ -216,7 +290,7 @@ export default function TasksPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Priority
@@ -232,18 +306,69 @@ export default function TasksPage() {
                       <option value="deadline">Deadline</option>
                     </select>
                   </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Due Date
+                      Do Date
                     </label>
                     <input
                       type="date"
-                      value={newTask.due_date}
-                      onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                      value={newTask.do_date}
+                      onChange={(e) => setNewTask({ ...newTask, do_date: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Do Time
+                    </label>
+                    <input
+                      type="time"
+                      value={newTask.do_time}
+                      onChange={(e) => setNewTask({ ...newTask, do_time: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+
+                {/* Cases Multi-Select Picker */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Link to Cases
+                  </label>
+                  <MultiSelectPicker
+                    options={cases.map(case_ => ({
+                      id: case_.id,
+                      label: case_.case_number ? `${case_.case_number}: ${case_.title}` : case_.title,
+                      sublabel: case_.client_name
+                    }))}
+                    selectedIds={newTask.case_ids}
+                    onChange={(selectedIds) => setNewTask({ ...newTask, case_ids: selectedIds })}
+                    placeholder="Select cases..."
+                    emptyMessage="No cases available"
+                  />
+                </div>
+
+                {/* Projects Multi-Select Picker */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Link to Projects
+                  </label>
+                  <MultiSelectPicker
+                    options={projects.map(project => ({
+                      id: project.id,
+                      label: project.title,
+                      sublabel: `${project.status} • ${project.priority} priority`
+                    }))}
+                    selectedIds={newTask.project_ids}
+                    onChange={(selectedIds) => setNewTask({ ...newTask, project_ids: selectedIds })}
+                    placeholder="Select projects..."
+                    emptyMessage="No projects available"
+                  />
                 </div>
               </div>
 
@@ -255,7 +380,7 @@ export default function TasksPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={addTask}
+                  onClick={handleAddTask}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                 >
                   Add Task
@@ -268,7 +393,7 @@ export default function TasksPage() {
         {/* Edit Task Form */}
         {showEditForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Edit Task</h3>
               
               <div className="space-y-4">
@@ -298,34 +423,83 @@ export default function TasksPage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Priority
+                  </label>
+                  <select
+                    value={editTask.priority}
+                    onChange={(e) => setEditTask({ ...editTask, priority: e.target.value as Task['priority'] })}
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  >
+                    <option value="P1">P1 (High)</option>
+                    <option value="P2">P2 (Medium)</option>
+                    <option value="P3">P3 (Low)</option>
+                    <option value="deadline">Deadline</option>
+                  </select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Priority
+                      Do Date
                     </label>
-                    <select
-                      value={editTask.priority}
-                      onChange={(e) => setEditTask({ ...editTask, priority: e.target.value as Task['priority'] })}
+                    <input
+                      type="date"
+                      value={editTask.do_date}
+                      onChange={(e) => setEditTask({ ...editTask, do_date: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                    >
-                      <option value="P1">P1 (High)</option>
-                      <option value="P2">P2 (Medium)</option>
-                      <option value="P3">P3 (Low)</option>
-                      <option value="deadline">Deadline</option>
-                    </select>
+                    />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Due Date
+                      Do Time
                     </label>
                     <input
-                      type="date"
-                      value={editTask.due_date}
-                      onChange={(e) => setEditTask({ ...editTask, due_date: e.target.value })}
+                      type="time"
+                      value={editTask.do_time}
+                      onChange={(e) => setEditTask({ ...editTask, do_time: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                     />
                   </div>
+                </div>
+
+
+                {/* Cases Multi-Select Picker */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Link to Cases
+                  </label>
+                  <MultiSelectPicker
+                    options={cases.map(case_ => ({
+                      id: case_.id,
+                      label: case_.case_number ? `${case_.case_number}: ${case_.title}` : case_.title,
+                      sublabel: case_.client_name
+                    }))}
+                    selectedIds={editTask.case_ids}
+                    onChange={(selectedIds) => setEditTask({ ...editTask, case_ids: selectedIds })}
+                    placeholder="Select cases..."
+                    emptyMessage="No cases available"
+                  />
+                </div>
+
+                {/* Projects Multi-Select Picker */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Link to Projects
+                  </label>
+                  <MultiSelectPicker
+                    options={projects.map(project => ({
+                      id: project.id,
+                      label: project.title,
+                      sublabel: `${project.status} • ${project.priority} priority`
+                    }))}
+                    selectedIds={editTask.project_ids}
+                    onChange={(selectedIds) => setEditTask({ ...editTask, project_ids: selectedIds })}
+                    placeholder="Select projects..."
+                    emptyMessage="No projects available"
+                  />
                 </div>
               </div>
 
@@ -361,10 +535,12 @@ export default function TasksPage() {
                   key={task.id} 
                   task={task} 
                   onStatusChange={updateTaskStatus}
-                  onDelete={deleteTask}
+                  onDelete={handleDeleteTask}
                   onEdit={startEditTask}
                   getPriorityColor={getPriorityColor}
                   getStatusColor={getStatusColor}
+                  getLinkedCases={getLinkedCases}
+                  getLinkedProjects={getLinkedProjects}
                 />
               ))}
               {tasksByStatus.inbox.length === 0 && (
@@ -387,10 +563,12 @@ export default function TasksPage() {
                   key={task.id} 
                   task={task} 
                   onStatusChange={updateTaskStatus}
-                  onDelete={deleteTask}
+                  onDelete={handleDeleteTask}
                   onEdit={startEditTask}
                   getPriorityColor={getPriorityColor}
                   getStatusColor={getStatusColor}
+                  getLinkedCases={getLinkedCases}
+                  getLinkedProjects={getLinkedProjects}
                 />
               ))}
               {tasksByStatus.next_action.length === 0 && (
@@ -413,10 +591,12 @@ export default function TasksPage() {
                   key={task.id} 
                   task={task} 
                   onStatusChange={updateTaskStatus}
-                  onDelete={deleteTask}
+                  onDelete={handleDeleteTask}
                   onEdit={startEditTask}
                   getPriorityColor={getPriorityColor}
                   getStatusColor={getStatusColor}
+                  getLinkedCases={getLinkedCases}
+                  getLinkedProjects={getLinkedProjects}
                 />
               ))}
               {tasksByStatus.in_progress.length === 0 && (
@@ -439,10 +619,12 @@ export default function TasksPage() {
                   key={task.id} 
                   task={task} 
                   onStatusChange={updateTaskStatus}
-                  onDelete={deleteTask}
+                  onDelete={handleDeleteTask}
                   onEdit={startEditTask}
                   getPriorityColor={getPriorityColor}
                   getStatusColor={getStatusColor}
+                  getLinkedCases={getLinkedCases}
+                  getLinkedProjects={getLinkedProjects}
                 />
               ))}
               {tasksByStatus.done.length === 0 && (
@@ -458,6 +640,206 @@ export default function TasksPage() {
   );
 }
 
+// Multi-Select Picker Component with Search
+interface MultiSelectPickerProps {
+  options: Array<{
+    id: string;
+    label: string;
+    sublabel?: string;
+  }>;
+  selectedIds: string[];
+  onChange: (selectedIds: string[]) => void;
+  placeholder: string;
+  emptyMessage: string;
+}
+
+function MultiSelectPicker({ options, selectedIds, onChange, placeholder, emptyMessage }: MultiSelectPickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const handleToggle = (optionId: string) => {
+    const newSelectedIds = selectedIds.includes(optionId)
+      ? selectedIds.filter(id => id !== optionId)
+      : [...selectedIds, optionId];
+    onChange(newSelectedIds);
+  };
+
+  const selectedOptions = options.filter(option => selectedIds.includes(option.id));
+
+  // Filter options based on search term
+  const filteredOptions = options.filter(option => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      option.label.toLowerCase().includes(searchLower) ||
+      (option.sublabel && option.sublabel.toLowerCase().includes(searchLower))
+    );
+  });
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleInputClick = () => {
+    setIsOpen(true);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+
+  return (
+    <div className="relative">
+      {/* Main Input Area */}
+      <div 
+        className="w-full min-h-[42px] px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white cursor-text"
+        onClick={handleInputClick}
+      >
+        {/* Selected Items */}
+        {selectedOptions.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1">
+            {selectedOptions.map(option => (
+              <span
+                key={option.id}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded"
+              >
+                {option.label}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggle(option.id);
+                  }}
+                  className="hover:text-blue-600 dark:hover:text-blue-300"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        
+        {/* Search Input */}
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={handleSearchChange}
+          onClick={handleInputClick}
+          placeholder={selectedOptions.length === 0 ? placeholder : "Type to search..."}
+          className="w-full bg-transparent border-none outline-none text-sm placeholder-slate-500 dark:placeholder-slate-400"
+        />
+      </div>
+
+      {/* Dropdown Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+      >
+        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+          {/* Search Results Info */}
+          {searchTerm && (
+            <div className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-600">
+              {filteredOptions.length === 0 
+                ? `No results for "${searchTerm}"`
+                : `${filteredOptions.length} result${filteredOptions.length === 1 ? '' : 's'} for "${searchTerm}"`
+              }
+            </div>
+          )}
+          
+          {/* Options List */}
+          {filteredOptions.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
+              {searchTerm ? `No matches found for "${searchTerm}"` : emptyMessage}
+            </div>
+          ) : (
+            filteredOptions.map(option => (
+              <label
+                key={option.id}
+                className="flex items-center px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-600 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(option.id)}
+                  onChange={() => handleToggle(option.id)}
+                  className="mr-2 rounded border-slate-300 dark:border-slate-600"
+                />
+                <div className="flex-1">
+                  <div className="text-sm text-slate-900 dark:text-white">
+                    {searchTerm ? (
+                      <HighlightText text={option.label} highlight={searchTerm} />
+                    ) : (
+                      option.label
+                    )}
+                  </div>
+                  {option.sublabel && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {searchTerm ? (
+                        <HighlightText text={option.sublabel} highlight={searchTerm} />
+                      ) : (
+                        option.sublabel
+                      )}
+                    </div>
+                  )}
+                </div>
+              </label>
+            ))
+          )}
+          
+          {/* Clear Search Button */}
+          {searchTerm && (
+            <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-600">
+              <button
+                onClick={() => setSearchTerm('')}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Click outside to close */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-0"
+          onClick={handleClose}
+        />
+      )}
+    </div>
+  );
+}
+
+// Helper component to highlight search terms
+function HighlightText({ text, highlight }: { text: string; highlight: string }) {
+  if (!highlight) return <>{text}</>;
+  
+  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, index) => 
+        part.toLowerCase() === highlight.toLowerCase() ? (
+          <mark key={index} className="bg-yellow-200 dark:bg-yellow-800 text-slate-900 dark:text-white">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 // Task Card Component
 interface TaskCardProps {
   task: Task;
@@ -466,10 +848,16 @@ interface TaskCardProps {
   onEdit?: (task: Task) => void;
   getPriorityColor: (priority: Task['priority']) => string;
   getStatusColor: (status: Task['status']) => string;
+  getLinkedCases?: (caseIds: string[]) => Case[];
+  getLinkedProjects?: (projectIds: string[]) => Project[];
 }
 
-function TaskCard({ task, onStatusChange, onDelete, onEdit, getPriorityColor, getStatusColor }: TaskCardProps) {
+function TaskCard({ task, onStatusChange, onDelete, onEdit, getPriorityColor, getStatusColor, getLinkedCases, getLinkedProjects }: TaskCardProps) {
   const [showActions, setShowActions] = useState(false);
+
+  // Get linked data
+  const linkedCases = getLinkedCases?.(task.case_ids) || [];
+  const linkedProjects = getLinkedProjects?.(task.project_ids) || [];
 
   return (
     <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3 border border-slate-200 dark:border-slate-600">
@@ -487,6 +875,42 @@ function TaskCard({ task, onStatusChange, onDelete, onEdit, getPriorityColor, ge
 
       {task.description && (
         <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">{task.description}</p>
+      )}
+
+      {/* Linked Cases/Projects Display */}
+      {(linkedCases.length > 0 || linkedProjects.length > 0) && (
+        <div className="mb-2 space-y-1">
+          {linkedCases.length > 0 && (
+            <div className="flex items-center space-x-1">
+              <svg className="w-3 h-3 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clipRule="evenodd" />
+              </svg>
+              <div className="flex flex-wrap gap-1">
+                {linkedCases.map((case_, index) => (
+                  <span key={case_.id} className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                    {case_.case_number ? `${case_.case_number}` : case_.title}
+                    {index < linkedCases.length - 1 && ', '}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {linkedProjects.length > 0 && (
+            <div className="flex items-center space-x-1">
+              <svg className="w-3 h-3 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
+              </svg>
+              <div className="flex flex-wrap gap-1">
+                {linkedProjects.map((project, index) => (
+                  <span key={project.id} className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                    {project.title}
+                    {index < linkedProjects.length - 1 && ', '}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="flex items-center justify-between">

@@ -1,6 +1,21 @@
+'use client';
+
 import Link from 'next/link';
+import { useData } from '../lib/dataContext';
 
 export default function Home() {
+  const { tasks, cases, projects, goals } = useData();
+
+  // Calculate stats
+  const activeTasks = tasks.filter(task => task.status !== 'done').length;
+  const completedToday = tasks.filter(task => {
+    if (task.status !== 'done') return false;
+    const today = new Date().toDateString();
+    const taskDate = new Date(task.updated_at).toDateString();
+    return today === taskDate;
+  }).length;
+  const knowledgeItems = 0; // Placeholder for future knowledge system
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       {/* Header */}
@@ -47,7 +62,7 @@ export default function Home() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Active Tasks</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">0</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{activeTasks}</p>
               </div>
             </div>
           </div>
@@ -61,7 +76,7 @@ export default function Home() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Completed Today</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">0</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{completedToday}</p>
               </div>
             </div>
           </div>
@@ -75,7 +90,7 @@ export default function Home() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Knowledge Items</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">0</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{knowledgeItems}</p>
               </div>
             </div>
           </div>
@@ -101,22 +116,40 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Knowledge Management */}
+          {/* Case Management */}
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Knowledge Base
+                Case Management
               </h3>
-              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
+              <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 rounded">
                 Phase 1
               </span>
             </div>
             <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
-              Your second brain for capturing, organizing, and retrieving all knowledge.
+              Manage legal cases, track time sessions, and monitor client work.
             </p>
-            <button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-              Open Knowledge
-            </button>
+            <Link href="/work" className="block w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-center">
+              Open Cases
+            </Link>
+          </div>
+
+          {/* Goals & Projects */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Goals & Projects
+              </h3>
+              <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded">
+                Phase 1
+              </span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
+              Set and track long-term goals with connected project management.
+            </p>
+            <Link href="/goals" className="block w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-center">
+              Open Goals
+            </Link>
           </div>
 
           {/* Review System */}
