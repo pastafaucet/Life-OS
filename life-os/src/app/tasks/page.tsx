@@ -7,7 +7,7 @@ interface Task {
   id: string;
   title: string;
   description: string;
-  status: 'inbox' | 'someday' | 'next_action' | 'in_progress' | 'done' | 'cancelled';
+  status: 'not_started' | 'inbox' | 'someday' | 'next_action' | 'in_progress' | 'done' | 'cancelled';
   priority: 'deadline' | 'urgent' | 'event' | 'quick' | 'p1' | 'p2' | 'p3' | 'personal';
   doDate?: string; // YYYY-MM-DD format - the operative date
   doTime?: string; // HH:MM format
@@ -29,7 +29,7 @@ interface NewTaskForm {
   linkedNotes: string[];
 }
 
-type FilterType = 'all' | 'today' | 'tomorrow' | 'no_date' | 'done' | 'inbox' | 'someday' | 'next_action' | 'in_progress' | 'cancelled';
+type FilterType = 'all' | 'today' | 'month' | 'tomorrow' | 'no_date' | 'done' | 'inbox' | 'someday' | 'next_action' | 'in_progress' | 'cancelled' | 'not_started';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -50,7 +50,7 @@ export default function TasksPage() {
   const [newTaskForm, setNewTaskForm] = useState<NewTaskForm>({
     title: '',
     description: '',
-    status: 'inbox',
+    status: 'not_started',
     priority: 'p2',
     doDate: '',
     doTime: '',
@@ -58,6 +58,10 @@ export default function TasksPage() {
     linkedCases: [],
     linkedNotes: []
   });
+  
+  // Month view specific state
+  const [monthViewDate, setMonthViewDate] = useState(new Date());
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -138,14 +142,15 @@ export default function TasksPage() {
     return date.toLocaleDateString('en-US', { weekday: 'long' });
   };
 
-  // Handle Escape key to close date picker
+  // Handle Escape key to close modals and dropdowns
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (showDatePicker) {
+        if (showNewTaskModal) {
+          handleCloseModal();
+        } else if (showDatePicker) {
           setShowDatePicker(false);
-        }
-        if (showPriorityDropdown) {
+        } else if (showPriorityDropdown) {
           setShowPriorityDropdown(false);
         }
       }
@@ -155,12 +160,25 @@ export default function TasksPage() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showDatePicker, showPriorityDropdown]);
+  }, [showNewTaskModal, showDatePicker, showPriorityDropdown]);
 
   const getFilteredTasks = () => {
     switch (activeFilter) {
       case 'today':
-        return tasks.filter(task => task.doDate === today);
+        return tasks.filter(task => 
+          task.doDate && 
+          task.doDate <= today && 
+          (task.status === 'not_started' || task.status === 'in_progress')
+        );
+      case 'month':
+        const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const currentMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+        return tasks.filter(task => 
+          task.doDate && 
+          task.doDate >= currentMonthStart && 
+          task.doDate <= currentMonthEnd &&
+          (task.status === 'not_started' || task.status === 'in_progress')
+        );
       case 'tomorrow':
         return tasks.filter(task => task.doDate === tomorrow);
       case 'no_date':
@@ -177,6 +195,8 @@ export default function TasksPage() {
         return tasks.filter(task => task.status === 'next_action');
       case 'in_progress':
         return tasks.filter(task => task.status === 'in_progress');
+      case 'not_started':
+        return tasks.filter(task => task.status === 'not_started');
       default:
         return tasks;
     }
@@ -226,7 +246,7 @@ export default function TasksPage() {
     setNewTaskForm({
       title: '',
       description: '',
-      status: 'inbox',
+      status: 'not_started',
       priority: 'p2',
       doDate: '',
       doTime: '',
@@ -259,7 +279,7 @@ export default function TasksPage() {
     setNewTaskForm({
       title: '',
       description: '',
-      status: 'inbox',
+      status: 'not_started',
       priority: 'p2',
       doDate: '',
       doTime: '',
@@ -273,6 +293,32 @@ export default function TasksPage() {
     setTasks(tasks.map(task => 
       task.id === id ? { ...task, status } : task
     ));
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    setDraggedTask(task);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, newDate: string) => {
+    e.preventDefault();
+    if (draggedTask) {
+      setTasks(tasks.map(task => 
+        task.id === draggedTask.id ? { ...task, doDate: newDate } : task
+      ));
+      setDraggedTask(null);
+    }
+  };
+
+  // Get tasks for a specific date
+  const getTasksForDate = (dateStr: string) => {
+    return filteredTasks.filter(task => task.doDate === dateStr);
   };
 
   const getPriorityColor = (priority: Task['priority']) => {
@@ -303,6 +349,19 @@ export default function TasksPage() {
     }
   };
 
+  const getStatusIcon = (status: Task['status']) => {
+    switch (status) {
+      case 'not_started': return '⭕';
+      case 'inbox': return '📥';
+      case 'someday': return '❓';
+      case 'next_action': return '⏩';
+      case 'in_progress': return '🔧';
+      case 'done': return '✅';
+      case 'cancelled': return '❌';
+      default: return '⭕';
+    }
+  };
+
   const getStatusColor = (status: Task['status']) => {
     switch (status) {
       case 'inbox': return 'bg-gray-100 text-gray-800';
@@ -317,16 +376,31 @@ export default function TasksPage() {
   const filteredTasks = getFilteredTasks();
 
   const filters = [
-    { key: 'all', label: 'All Tasks', count: tasks.length },
-    { key: 'today', label: 'Today', count: tasks.filter(t => t.doDate === today).length },
+    { key: 'today', label: 'Today', count: tasks.filter(t => 
+      t.doDate && 
+      t.doDate <= today && 
+      (t.status === 'not_started' || t.status === 'in_progress')
+    ).length },
+    { key: 'month', label: 'Month', count: (() => {
+      const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      const currentMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+      return tasks.filter(t => 
+        t.doDate && 
+        t.doDate >= currentMonthStart && 
+        t.doDate <= currentMonthEnd &&
+        (t.status === 'not_started' || t.status === 'in_progress')
+      ).length;
+    })() },
     { key: 'tomorrow', label: 'Tomorrow', count: tasks.filter(t => t.doDate === tomorrow).length },
     { key: 'no_date', label: 'No Date', count: tasks.filter(t => !t.doDate).length },
     { key: 'inbox', label: 'Inbox', count: tasks.filter(t => t.status === 'inbox').length },
     { key: 'someday', label: 'Someday', count: tasks.filter(t => t.status === 'someday').length },
     { key: 'next_action', label: 'Next Actions', count: tasks.filter(t => t.status === 'next_action').length },
     { key: 'in_progress', label: 'In Progress', count: tasks.filter(t => t.status === 'in_progress').length },
+    { key: 'not_started', label: 'Not Started', count: tasks.filter(t => t.status === 'not_started').length },
     { key: 'done', label: 'Done', count: tasks.filter(t => t.status === 'done').length },
     { key: 'cancelled', label: 'Cancelled', count: tasks.filter(t => t.status === 'cancelled').length },
+    { key: 'all', label: 'All Tasks', count: tasks.length },
   ];
 
   return (
@@ -413,6 +487,11 @@ export default function TasksPage() {
                           
                         </div>
                         
+                        {/* Status Icon */}
+                        <div className="text-xl flex-shrink-0 mt-1 mr-3">
+                          {getStatusIcon(task.status)}
+                        </div>
+                        
                         {/* Checkbox on far right */}
                         <div className="flex-shrink-0 mt-1">
                           <button
@@ -436,81 +515,186 @@ export default function TasksPage() {
               </div>
             </div>
 
-            {/* Tasks Section */}
-            <div>
-              <h2 className="text-xl font-semibold text-white mb-4">Tasks</h2>
-              <div className="space-y-4">
-                {filteredTasks.filter(task => task.priority !== 'event').length === 0 ? (
-                  <div className="bg-gray-800 rounded-lg shadow-md p-8 text-center">
-                    <div className="text-gray-500 mb-4">
-                      <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-medium text-white mb-2">
-                      {activeFilter === 'all' ? 'No tasks yet' : `No ${activeFilter.replace('_', ' ')} tasks`}
-                    </h3>
-                    <p className="text-gray-400 mb-4">
-                      {activeFilter === 'all' 
-                        ? 'Create your first task to get started!' 
-                        : `No tasks match the ${activeFilter.replace('_', ' ')} filter.`
-                      }
-                    </p>
+            {/* Tasks Section - Calendar View for Month Filter */}
+            {activeFilter === 'month' ? (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-white">Monthly Calendar</h2>
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setShowNewTaskModal(true)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      onClick={() => setMonthViewDate(new Date(monthViewDate.getFullYear(), monthViewDate.getMonth() - 1))}
+                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
                     >
-                      Create First Task
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <h3 className="text-lg font-medium text-white min-w-[200px] text-center">
+                      {monthViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </h3>
+                    <button
+                      onClick={() => setMonthViewDate(new Date(monthViewDate.getFullYear(), monthViewDate.getMonth() + 1))}
+                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   </div>
-                ) : (
-                  filteredTasks.filter(task => task.priority !== 'event').map((task) => (
-                    <div 
-                      key={task.id} 
-                      className="bg-gray-800 rounded-lg shadow-md p-6 cursor-pointer hover:bg-gray-750 transition-colors"
-                      onClick={() => handleEditTask(task)}
-                    >
-                      <div className="flex items-start gap-4">
-                        {/* Priority Icon on far left */}
-                        <div className="text-2xl flex-shrink-0 mt-1">
-                          {getPriorityIcon(task.priority)}
-                        </div>
-                        
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-white mb-2">
-                            {task.title}
-                          </h3>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="bg-gray-800 rounded-lg p-4">
+                  {/* Day Headers */}
+                  <div className="grid grid-cols-7 gap-2 mb-4">
+                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => (
+                      <div key={day} className="text-center text-sm font-medium text-gray-400 py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calendar Days */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {generateCalendar(monthViewDate).flat().map((date, index) => {
+                      const dateStr = date.toISOString().split('T')[0];
+                      const isToday = dateStr === today;
+                      const isCurrentMonth = date.getMonth() === monthViewDate.getMonth();
+                      const dayTasks = getTasksForDate(dateStr);
+                      
+                      return (
+                        <div
+                          key={index}
+                          className={`min-h-[120px] p-2 rounded-lg border transition-colors ${
+                            isCurrentMonth 
+                              ? 'bg-gray-700 border-gray-600' 
+                              : 'bg-gray-800 border-gray-700'
+                          } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, dateStr)}
+                        >
+                          <div className={`text-sm font-medium mb-2 ${
+                            isToday ? 'text-blue-400' : isCurrentMonth ? 'text-white' : 'text-gray-500'
+                          }`}>
+                            {date.getDate()}
+                          </div>
                           
-                          {task.description && (
-                            <p className="text-gray-300 mb-3">
-                              {task.description}
-                            </p>
-                          )}
-                          
+                          {/* Tasks for this day */}
+                          <div className="space-y-1">
+                            {dayTasks.map((task) => (
+                              <div
+                                key={task.id}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, task)}
+                                onClick={() => handleEditTask(task)}
+                                className="bg-gray-600 rounded px-2 py-1 text-xs text-white cursor-pointer hover:bg-gray-500 transition-colors flex items-center gap-1"
+                              >
+                                <span className="text-xs">{getPriorityIcon(task.priority)}</span>
+                                <span className="truncate flex-1">{task.title}</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateTaskStatus(task.id, task.status === 'done' ? 'not_started' : 'done');
+                                  }}
+                                  className="w-3 h-3 border border-gray-400 rounded-sm hover:border-green-400 transition-colors flex items-center justify-center flex-shrink-0"
+                                >
+                                  {task.status === 'done' && (
+                                    <svg className="w-2 h-2 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        
-                        {/* Checkbox on far right */}
-                        <div className="flex-shrink-0 mt-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateTaskStatus(task.id, task.status === 'done' ? 'inbox' : 'done');
-                            }}
-                            className="w-6 h-6 border-2 border-gray-400 rounded hover:border-green-400 transition-colors flex items-center justify-center"
-                          >
-                            {task.status === 'done' && (
-                              <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Regular Tasks List View */
+              <div>
+                <h2 className="text-xl font-semibold text-white mb-4">Tasks</h2>
+                <div className="space-y-4">
+                  {filteredTasks.filter(task => task.priority !== 'event').length === 0 ? (
+                    <div className="bg-gray-800 rounded-lg shadow-md p-8 text-center">
+                      <div className="text-gray-500 mb-4">
+                        <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-white mb-2">
+                        {activeFilter === 'all' ? 'No tasks yet' : `No ${activeFilter.replace('_', ' ')} tasks`}
+                      </h3>
+                      <p className="text-gray-400 mb-4">
+                        {activeFilter === 'all' 
+                          ? 'Create your first task to get started!' 
+                          : `No tasks match the ${activeFilter.replace('_', ' ')} filter.`
+                        }
+                      </p>
+                      <button
+                        onClick={() => setShowNewTaskModal(true)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Create First Task
+                      </button>
+                    </div>
+                  ) : (
+                    filteredTasks.filter(task => task.priority !== 'event').map((task) => (
+                      <div 
+                        key={task.id} 
+                        className="bg-gray-800 rounded-lg shadow-md p-6 cursor-pointer hover:bg-gray-750 transition-colors"
+                        onClick={() => handleEditTask(task)}
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Priority Icon on far left */}
+                          <div className="text-2xl flex-shrink-0 mt-1">
+                            {getPriorityIcon(task.priority)}
+                          </div>
+                          
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-white mb-2">
+                              {task.title}
+                            </h3>
+                            
+                            {task.description && (
+                              <p className="text-gray-300 mb-3">
+                                {task.description}
+                              </p>
                             )}
-                          </button>
+                            
+                          </div>
+                          
+                          {/* Status Icon */}
+                          <div className="text-xl flex-shrink-0 mt-1 mr-3">
+                            {getStatusIcon(task.status)}
+                          </div>
+                          
+                          {/* Checkbox on far right */}
+                          <div className="flex-shrink-0 mt-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateTaskStatus(task.id, task.status === 'done' ? 'inbox' : 'done');
+                              }}
+                              className="w-6 h-6 border-2 border-gray-400 rounded hover:border-green-400 transition-colors flex items-center justify-center"
+                            >
+                              {task.status === 'done' && (
+                                <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Column - Context Panel (1/3) */}
@@ -819,15 +1003,9 @@ export default function TasksPage() {
                 <div className="relative">
                   <button
                     onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      newTaskForm.priority !== 'p2'
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors bg-gray-700 text-gray-300 hover:bg-gray-600"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2" />
-                    </svg>
+                    <span className="text-sm">{getPriorityIcon(newTaskForm.priority)}</span>
                     {newTaskForm.priority.toUpperCase()}
                   </button>
                   
@@ -835,14 +1013,14 @@ export default function TasksPage() {
                   {showPriorityDropdown && (
                     <div className="absolute top-full left-0 mt-2 bg-gray-700 border border-gray-600 rounded-lg shadow-lg py-2 z-10 min-w-[150px]">
                       {[
-                        { value: 'deadline', label: 'Deadline', color: 'text-red-400' },
-                        { value: 'urgent', label: 'Urgent', color: 'text-orange-400' },
-                        { value: 'event', label: 'Event', color: 'text-purple-400' },
-                        { value: 'quick', label: 'Quick', color: 'text-blue-400' },
-                        { value: 'p1', label: 'P1', color: 'text-red-400' },
-                        { value: 'p2', label: 'P2', color: 'text-yellow-400' },
-                        { value: 'p3', label: 'P3', color: 'text-green-400' },
-                        { value: 'personal', label: 'Personal', color: 'text-pink-400' }
+                        { value: 'deadline', label: 'Deadline', color: 'text-red-400', icon: '‼️' },
+                        { value: 'urgent', label: 'Urgent', color: 'text-orange-400', icon: '🔥' },
+                        { value: 'event', label: 'Event', color: 'text-purple-400', icon: '📅' },
+                        { value: 'quick', label: 'Quick', color: 'text-blue-400', icon: '⚡' },
+                        { value: 'p1', label: 'P1', color: 'text-red-400', icon: '🔴' },
+                        { value: 'p2', label: 'P2', color: 'text-yellow-400', icon: '🟡' },
+                        { value: 'p3', label: 'P3', color: 'text-green-400', icon: '🟢' },
+                        { value: 'personal', label: 'Personal', color: 'text-pink-400', icon: '😊' }
                       ].map((priority) => (
                         <button
                           key={priority.value}
@@ -850,9 +1028,10 @@ export default function TasksPage() {
                             setNewTaskForm({ ...newTaskForm, priority: priority.value as Task['priority'] });
                             setShowPriorityDropdown(false);
                           }}
-                          className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${priority.color}`}
+                          className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${priority.color} flex items-center gap-2`}
                         >
-                          {priority.label}
+                          <span>{priority.icon}</span>
+                          <span>{priority.label}</span>
                         </button>
                       ))}
                     </div>
@@ -866,10 +1045,11 @@ export default function TasksPage() {
                     onChange={(e) => setNewTaskForm({ ...newTaskForm, status: e.target.value as Task['status'] })}
                     className="px-3 py-2 bg-gray-700 text-gray-300 border border-gray-600 rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500"
                   >
+                    <option value="not_started">⭕ Not Started</option>
                     <option value="inbox">📥 Inbox</option>
-                    <option value="someday">📅 Someday</option>
-                    <option value="next_action">⚡ Next Action</option>
-                    <option value="in_progress">🔄 In Progress</option>
+                    <option value="someday">❓ Someday</option>
+                    <option value="next_action">⏩ Next Action</option>
+                    <option value="in_progress">🔧 In Progress</option>
                     <option value="done">✅ Done</option>
                     <option value="cancelled">❌ Cancelled</option>
                   </select>
