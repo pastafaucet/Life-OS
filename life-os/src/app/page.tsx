@@ -133,20 +133,53 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Stats Section */}
-        <div className="mt-12 bg-gray-800 rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Quick Overview</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-blue-900 bg-opacity-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-400">0</div>
-              <div className="text-sm text-gray-300">Active Tasks</div>
+        <div className="mt-12 grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Main Stats */}
+          <div className="lg:col-span-3 bg-gray-800 rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Quick Overview</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-blue-900 bg-opacity-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-400">0</div>
+                <div className="text-sm text-gray-300">Active Tasks</div>
+              </div>
+              <div className="text-center p-4 bg-purple-900 bg-opacity-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-400">0</div>
+                <div className="text-sm text-gray-300">Knowledge Items</div>
+              </div>
+              <div className="text-center p-4 bg-green-900 bg-opacity-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-400">2</div>
+                <div className="text-sm text-gray-300">Active Modules</div>
+              </div>
             </div>
-            <div className="text-center p-4 bg-purple-900 bg-opacity-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-400">0</div>
-              <div className="text-sm text-gray-300">Knowledge Items</div>
+          </div>
+
+          {/* MCLE Summary Ribbon */}
+          <div className="bg-gray-800 rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">MCLE Status</h3>
+              <Link href="/mcle" className="text-blue-400 hover:text-blue-300 text-sm">
+                View Details →
+              </Link>
             </div>
-            <div className="text-center p-4 bg-green-900 bg-opacity-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-400">2</div>
-              <div className="text-sm text-gray-300">Active Modules</div>
+            
+            {/* Nevada */}
+            <div className="mb-4 p-3 bg-gray-700 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-white">Nevada</span>
+                <span className="text-xs text-gray-400">245 days left</span>
+              </div>
+              <div className="text-lg font-bold text-orange-400">10 hours needed</div>
+              <div className="text-xs text-gray-400">Period: Jul 2024 - Jun 2027</div>
+            </div>
+
+            {/* California */}
+            <div className="p-3 bg-gray-700 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-white">California</span>
+                <span className="text-xs text-gray-400">245 days left</span>
+              </div>
+              <div className="text-lg font-bold text-red-400">25 hours needed</div>
+              <div className="text-xs text-gray-400">Period: Feb 2025 - Jan 2028</div>
             </div>
           </div>
         </div>
