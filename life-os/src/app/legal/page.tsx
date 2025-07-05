@@ -395,6 +395,34 @@ export default function LegalPage() {
                 </div>
               </div>
 
+              {/* MCLE Summary */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-gray-300">MCLE Status</h4>
+                  <Link href="/mcle" className="text-blue-400 hover:text-blue-300 text-xs">
+                    Details →
+                  </Link>
+                </div>
+                
+                {/* Nevada */}
+                <div className="mb-3 p-2 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-medium text-white">Nevada</span>
+                    <span className="text-xs text-gray-400">245 days left</span>
+                  </div>
+                  <div className="text-sm font-bold text-orange-400">10 hours needed</div>
+                </div>
+
+                {/* California */}
+                <div className="p-2 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-medium text-white">California</span>
+                    <span className="text-xs text-gray-400">245 days left</span>
+                  </div>
+                  <div className="text-sm font-bold text-red-400">25 hours needed</div>
+                </div>
+              </div>
+
               {/* Action Buttons */}
               <div className="space-y-2">
                 <button 
