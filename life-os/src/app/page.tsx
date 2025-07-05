@@ -166,10 +166,10 @@ export default function Dashboard() {
             <div className="mb-4 p-3 bg-gray-700 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-white">Nevada</span>
-                <span className="text-xs text-gray-400">245 days left</span>
+                <span className="text-xs text-gray-400">180 days left</span>
               </div>
               <div className="text-lg font-bold text-orange-400">10 hours needed</div>
-              <div className="text-xs text-gray-400">Period: Jul 2024 - Jun 2027</div>
+              <div className="text-xs text-gray-400">Period: Jan 1 - Dec 31, 2025</div>
             </div>
 
             {/* California */}

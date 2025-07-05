@@ -408,7 +408,7 @@ export default function LegalPage() {
                 <div className="mb-3 p-2 bg-gray-700 rounded">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-medium text-white">Nevada</span>
-                    <span className="text-xs text-gray-400">245 days left</span>
+                    <span className="text-xs text-gray-400">180 days left</span>
                   </div>
                   <div className="text-sm font-bold text-orange-400">10 hours needed</div>
                 </div>
