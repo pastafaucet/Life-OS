@@ -39,7 +39,7 @@ export default function Dashboard() {
       href: '/legal',
       icon: '⚖️',
       color: 'bg-gray-700 hover:bg-gray-800',
-      available: false
+      available: true
     },
     {
       id: 'finance',
@@ -145,7 +145,7 @@ export default function Dashboard() {
               <div className="text-sm text-gray-300">Knowledge Items</div>
             </div>
             <div className="text-center p-4 bg-green-900 bg-opacity-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-400">1</div>
+              <div className="text-2xl font-bold text-green-400">2</div>
               <div className="text-sm text-gray-300">Active Modules</div>
             </div>
           </div>
