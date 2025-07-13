@@ -1,197 +1,508 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { 
+  Calendar, Clock, Bell, AlertTriangle, CheckCircle, Brain, 
+  TrendingUp, Users, Phone, Mail, MessageSquare, Zap,
+  Eye, MoreHorizontal, ArrowRight, Target, FileText,
+  Gavel, Scale, DollarSign, Timer, ChevronRight, Star
+} from 'lucide-react';
 import { useData } from '../lib/dataContext';
 
-export default function Home() {
-  const { tasks, cases, projects, goals } = useData();
+// Mock intelligent data for the Tesla-style dashboard
+const mockIntelligentData = {
+  aiInsights: {
+    criticalPath: "Motion response due tomorrow - 6h work needed",
+    prediction: "On track for all deadlines with current pace",
+    recommendation: "Focus 9-11 AM (peak productivity) on legal research",
+    efficiency: "+23% vs last week"
+  },
+  
+  workloadAnalysis: {
+    currentCapacity: 78,
+    taskVelocity: 4.2,
+    efficiencyTrend: "increasing",
+    recommendedActions: ["Can accept 2 more cases", "Optimal focus: Tuesday AM"]
+  }
+};
 
-  // Calculate stats
-  const activeTasks = tasks.filter(task => task.status !== 'done').length;
-  const completedToday = tasks.filter(task => {
-    if (task.status !== 'done') return false;
-    const today = new Date().toDateString();
-    const taskDate = new Date(task.updated_at).toDateString();
-    return today === taskDate;
-  }).length;
-  const knowledgeItems = 0; // Placeholder for future knowledge system
+export default function IntelligentDashboard() {
+  const { tasks, cases } = useData();
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getTimeUntilDeadline = (dueDate: string) => {
+    const now = new Date();
+    const deadline = new Date(dueDate);
+    const diffInMs = deadline.getTime() - now.getTime();
+    const diffInHours = Math.max(0, Math.floor(diffInMs / (1000 * 60 * 60)));
+    
+    if (diffInHours < 24) return `${diffInHours}h`;
+    const days = Math.floor(diffInHours / 24);
+    return `${days}d ${diffInHours % 24}h`;
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': case 'P1': case 'deadline': return 'bg-red-500';
+      case 'high': case 'P2': return 'bg-orange-500';
+      case 'medium': case 'P3': return 'bg-yellow-500';
+      case 'low': return 'bg-blue-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'ai_prioritized': case 'in_progress': return <Brain className="w-4 h-4 text-purple-400" />;
+      case 'waiting_followup': case 'inbox': return <Clock className="w-4 h-4 text-orange-400" />;
+      case 'background_ready': case 'next_action': return <Eye className="w-4 h-4 text-blue-400" />;
+      default: return <CheckCircle className="w-4 h-4 text-green-400" />;
+    }
+  };
+
+  // Get urgent tasks (due today or overdue)
+  const urgentTasks = tasks.filter(task => {
+    if (!task.due_date) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return task.due_date <= today && task.status !== 'done';
+  }).slice(0, 3);
+
+  // Get high priority tasks
+  const highPriorityTasks = tasks.filter(task => 
+    (task.priority === 'P1' || task.priority === 'deadline') && task.status !== 'done'
+  ).slice(0, 3);
+
+  // Get recent cases
+  const recentCases = cases.slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                Life OS
-              </h1>
-              <span className="ml-2 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
-                v1.0
-              </span>
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* AI-Powered Header */}
+      <div className="bg-gradient-to-r from-blue-900 via-purple-900 to-indigo-900 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Good morning! 🌅</h1>
+              <p className="text-blue-200 text-lg">AI analyzed your workflow - here's your intelligent priority guide</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-slate-600 dark:text-slate-300">
-                Welcome back!
-              </span>
+            <div className="text-right text-blue-200">
+              <div className="text-sm">{currentTime.toLocaleDateString()}</div>
+              <div className="text-lg font-mono">{currentTime.toLocaleTimeString()}</div>
             </div>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Dashboard Overview */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Dashboard
-          </h2>
-          <p className="text-slate-600 dark:text-slate-300">
-            Your personal operating system for life optimization
-          </p>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
+          
+          {/* AI Intelligence Bar */}
+          <div className="bg-white bg-opacity-10 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Brain className="w-6 h-6 text-purple-300" />
+                <div>
+                  <h3 className="font-bold text-white">🧠 AI Strategic Analysis</h3>
+                  <p className="text-blue-200 text-sm">{mockIntelligentData.aiInsights.criticalPath}</p>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Active Tasks</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{activeTasks}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Completed Today</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{completedToday}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Knowledge Items</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{knowledgeItems}</p>
+              <div className="flex space-x-4">
+                <div className="text-center">
+                  <div className="text-sm text-blue-300">Efficiency</div>
+                  <div className="text-lg font-bold text-green-400">{mockIntelligentData.aiInsights.efficiency}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-blue-300">Prediction</div>
+                  <div className="text-lg font-bold text-blue-300">✅ On Track</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Phase 1 Modules */}
+      {/* Critical Intelligence Banner */}
+      {urgentTasks.length > 0 && (
+        <div className="bg-gradient-to-r from-red-600 to-orange-600 p-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                <div>
+                  <h3 className="font-bold text-white">🚨 Critical Path Detected</h3>
+                  <p className="text-red-100">{urgentTasks.length} urgent task{urgentTasks.length > 1 ? 's' : ''} need{urgentTasks.length === 1 ? 's' : ''} immediate attention</p>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Link href="/tasks?filter=today">
+                  <button className="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
+                    🎯 View Tasks
+                  </button>
+                </Link>
+                <button className="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
+                  📱 Mobile Alert
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Task Management */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Task Management
-              </h3>
-              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
-                Phase 1
-              </span>
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
-              Central command for all work and personal tasks with AI-driven prioritization.
-            </p>
-            <Link href="/tasks" className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-center">
-              Open Tasks
-            </Link>
-          </div>
-
-          {/* Case Management */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Case Management
-              </h3>
-              <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 rounded">
-                Phase 1
-              </span>
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
-              Manage legal cases, track time sessions, and monitor client work.
-            </p>
-            <Link href="/work" className="block w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-center">
-              Open Cases
-            </Link>
-          </div>
-
-          {/* Goals & Projects */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Goals & Projects
-              </h3>
-              <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded">
-                Phase 1
-              </span>
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
-              Set and track long-term goals with connected project management.
-            </p>
-            <Link href="/goals" className="block w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-center">
-              Open Goals
-            </Link>
-          </div>
-
-          {/* Review System */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Review System
-              </h3>
-              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
-                Phase 1
-              </span>
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
-              Daily, weekly, and monthly reviews for continuous life optimization.
-            </p>
-            <button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-              Start Review
-            </button>
-          </div>
-        </div>
-
-        {/* Coming Soon */}
-        <div className="mt-8">
-          <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-            Coming Soon
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { name: "Legal Practice", phase: "Phase 2", icon: "⚖️" },
-              { name: "Financial Tracking", phase: "Phase 3", icon: "💰" },
-              { name: "Health & Fitness", phase: "Phase 4", icon: "💪" },
-              { name: "AI Assistant", phase: "Phase 6", icon: "🤖" }
-            ].map((module) => (
-              <div key={module.name} className="bg-slate-100 dark:bg-slate-700 rounded-lg p-4 text-center">
-                <div className="text-2xl mb-2">{module.icon}</div>
-                <h4 className="font-medium text-slate-900 dark:text-white text-sm">{module.name}</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{module.phase}</p>
+          
+          {/* Left Column: AI-Prioritized Tasks */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Intelligent Task Queue */}
+            <div className="bg-gray-800 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center">
+                  <Brain className="w-5 h-5 mr-2 text-purple-400" />
+                  🎯 AI-Prioritized Task Queue
+                </h2>
+                <Link href="/tasks">
+                  <button className="bg-purple-600 px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition">
+                    ✨ View All Tasks
+                  </button>
+                </Link>
               </div>
-            ))}
+
+              <div className="space-y-4">
+                {highPriorityTasks.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-400 mb-2">🎉</div>
+                    <p className="text-gray-400">No high priority tasks - you're caught up!</p>
+                    <Link href="/tasks">
+                      <button className="mt-2 text-blue-400 hover:text-blue-300 text-sm">
+                        View all tasks →
+                      </button>
+                    </Link>
+                  </div>
+                ) : (
+                  highPriorityTasks.map(task => (
+                    <div key={task.id} className="bg-gray-700 rounded-lg p-4 border-l-4 border-purple-500">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            {getStatusIcon(task.status)}
+                            <span className={`w-3 h-3 rounded-full ${getPriorityColor(task.priority)}`}></span>
+                            <span className="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">
+                              {task.priority}
+                            </span>
+                          </div>
+                          <h3 className="font-semibold text-white mb-1">{task.title}</h3>
+                          {task.description && (
+                            <p className="text-sm text-gray-300 mb-2">{task.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          {task.due_date && (
+                            <div className="text-xs text-orange-400">
+                              Due: {getTimeUntilDeadline(task.due_date)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* AI Insights Panel */}
+                      <div className="bg-purple-900 bg-opacity-30 rounded-lg p-3 mb-3">
+                        <h4 className="text-sm font-semibold text-purple-300 mb-2">🤖 AI Insights</h4>
+                        <div className="text-xs text-gray-300">
+                          <div className="mb-1">
+                            <span className="text-purple-400">Status:</span> {task.status.replace('_', ' ')}
+                          </div>
+                          <div className="mb-1">
+                            <span className="text-purple-400">Priority:</span> {task.priority} - High importance
+                          </div>
+                          {task.due_date && (
+                            <div>
+                              <span className="text-purple-400">Timing:</span> Due {task.due_date}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="flex space-x-2">
+                        <Link href={`/tasks?edit=${task.id}`}>
+                          <button className="bg-blue-600 px-3 py-1 rounded text-xs hover:bg-blue-700 transition">
+                            🎯 Start Now
+                          </button>
+                        </Link>
+                        <button className="bg-green-600 px-3 py-1 rounded text-xs hover:bg-green-700 transition">
+                          📅 Schedule
+                        </button>
+                        <button className="bg-purple-600 px-3 py-1 rounded text-xs hover:bg-purple-700 transition">
+                          🤖 AI Assist
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Recent Cases Dashboard */}
+            <div className="bg-gray-800 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center">
+                  <Gavel className="w-5 h-5 mr-2 text-gray-400" />
+                  ⚖️ Recent Cases
+                </h2>
+                <Link href="/work">
+                  <button className="bg-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-700 transition">
+                    View All Cases
+                  </button>
+                </Link>
+              </div>
+
+              <div className="space-y-4">
+                {recentCases.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-400 mb-2">📁</div>
+                    <p className="text-gray-400">No cases yet</p>
+                    <Link href="/work">
+                      <button className="mt-2 text-blue-400 hover:text-blue-300 text-sm">
+                        Create first case →
+                      </button>
+                    </Link>
+                  </div>
+                ) : (
+                  recentCases.map(case_ => (
+                    <div key={case_.id} className="bg-gray-700 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-white">{case_.title}</h3>
+                          <p className="text-sm text-gray-300">{case_.status}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Active
+                          </span>
+                        </div>
+                      </div>
+
+                      {case_.description && (
+                        <p className="text-sm text-gray-400 mb-3">{case_.description}</p>
+                      )}
+
+                      <div className="flex space-x-2">
+                        <Link href={`/work?edit=${case_.id}`}>
+                          <button className="bg-blue-600 px-3 py-1 rounded text-xs hover:bg-blue-700 transition">
+                            📄 View Details
+                          </button>
+                        </Link>
+                        <button className="bg-green-600 px-3 py-1 rounded text-xs hover:bg-green-700 transition">
+                          📧 Contact Client
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Module Access Grid */}
+            <div className="bg-gray-800 rounded-xl p-6">
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+                <Target className="w-5 h-5 mr-2 text-blue-400" />
+                🚀 Life OS Modules
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Link href="/tasks">
+                  <div className="bg-blue-600 text-white rounded-lg p-4 hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 cursor-pointer">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-2xl">📋</div>
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1">Tasks</h3>
+                    <p className="text-blue-100 text-sm">Task & Project Management</p>
+                    <div className="mt-2 text-xs text-blue-200">
+                      {tasks.filter(t => t.status !== 'done').length} active tasks
+                    </div>
+                  </div>
+                </Link>
+
+                <Link href="/work">
+                  <div className="bg-gray-700 text-white rounded-lg p-4 hover:bg-gray-600 transition-all duration-200 transform hover:scale-105 cursor-pointer">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-2xl">⚖️</div>
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1">Legal Cases</h3>
+                    <p className="text-gray-300 text-sm">Case Management</p>
+                    <div className="mt-2 text-xs text-gray-400">
+                      {cases.length} active cases
+                    </div>
+                  </div>
+                </Link>
+
+                <div className="bg-gray-700 text-gray-300 rounded-lg p-4 relative opacity-60">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-2xl opacity-50">🧠</div>
+                    <div className="bg-yellow-500 text-yellow-900 text-xs font-medium px-2 py-1 rounded-full">
+                      Coming Soon
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold mb-1 text-white">Knowledge</h3>
+                  <p className="text-gray-400 text-sm">Second Brain & Notes</p>
+                </div>
+
+                <div className="bg-gray-700 text-gray-300 rounded-lg p-4 relative opacity-60">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-2xl opacity-50">💰</div>
+                    <div className="bg-yellow-500 text-yellow-900 text-xs font-medium px-2 py-1 rounded-full">
+                      Coming Soon
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold mb-1 text-white">Finance</h3>
+                  <p className="text-gray-400 text-sm">Net Worth & Budgets</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Live Intelligence */}
+          <div className="space-y-6">
+            
+            {/* Critical Deadlines */}
+            <div className="bg-gray-800 rounded-xl p-6">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                <AlertTriangle className="w-5 h-5 mr-2 text-red-400" />
+                🚨 Critical Deadlines
+              </h2>
+
+              <div className="space-y-3">
+                {urgentTasks.length === 0 ? (
+                  <div className="text-center py-4">
+                    <div className="text-green-400 mb-2">✅</div>
+                    <p className="text-gray-400 text-sm">No urgent deadlines</p>
+                  </div>
+                ) : (
+                  urgentTasks.map(task => (
+                    <div key={task.id} className="bg-red-900 bg-opacity-30 border border-red-500 rounded-lg p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-semibold text-white text-sm">{task.title}</h4>
+                          {task.description && (
+                            <p className="text-red-300 text-xs">{task.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-red-400 font-bold text-sm">
+                            {task.due_date ? getTimeUntilDeadline(task.due_date) : 'No date'}
+                          </div>
+                          {task.due_date && (
+                            <div className="text-red-300 text-xs">
+                              {new Date(task.due_date).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-red-200 mb-2">🤖 AI: High priority task needs attention</p>
+                      
+                      <div className="flex space-x-1">
+                        <Link href={`/tasks?edit=${task.id}`}>
+                          <button className="bg-red-600 px-2 py-1 rounded text-xs hover:bg-red-700 transition">
+                            🎯 Work Now
+                          </button>
+                        </Link>
+                        <button className="bg-orange-600 px-2 py-1 rounded text-xs hover:bg-orange-700 transition">
+                          📅 Schedule
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Live Workload Analysis */}
+            <div className="bg-gray-800 rounded-xl p-6">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-blue-400" />
+                📊 Live Workload Analysis
+              </h2>
+
+              <div className="space-y-4">
+                <div className="bg-blue-900 bg-opacity-30 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-blue-300 text-sm">Capacity</span>
+                    <span className="text-blue-400 font-bold">{mockIntelligentData.workloadAnalysis.currentCapacity}%</span>
+                  </div>
+                  <div className="w-full bg-blue-900 rounded-full h-2">
+                    <div 
+                      className="bg-blue-400 h-2 rounded-full" 
+                      style={{ width: `${mockIntelligentData.workloadAnalysis.currentCapacity}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-green-900 bg-opacity-30 rounded-lg p-3">
+                    <div className="text-green-400 text-xs">Task Velocity</div>
+                    <div className="text-green-300 font-bold">{mockIntelligentData.workloadAnalysis.taskVelocity}/day</div>
+                  </div>
+                  <div className="bg-purple-900 bg-opacity-30 rounded-lg p-3">
+                    <div className="text-purple-400 text-xs">Efficiency</div>
+                    <div className="text-purple-300 font-bold">↗️ +23%</div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-900 bg-opacity-30 rounded-lg p-3">
+                  <h4 className="text-yellow-400 text-sm font-semibold mb-2">🤖 AI Recommendations</h4>
+                  <ul className="text-yellow-200 text-xs space-y-1">
+                    {mockIntelligentData.workloadAnalysis.recommendedActions.map((action, index) => (
+                      <li key={index}>• {action}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-gray-800 rounded-xl p-6">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                <Zap className="w-5 h-5 mr-2 text-yellow-400" />
+                ⚡ Quick Actions
+              </h2>
+
+              <div className="space-y-2">
+                <Link href="/tasks">
+                  <button className="w-full bg-blue-600 p-3 rounded-lg text-left hover:bg-blue-700 transition">
+                    🎯 View All Tasks
+                  </button>
+                </Link>
+                <Link href="/work">
+                  <button className="w-full bg-gray-600 p-3 rounded-lg text-left hover:bg-gray-700 transition">
+                    ⚖️ Manage Legal Cases
+                  </button>
+                </Link>
+                <button className="w-full bg-purple-600 p-3 rounded-lg text-left hover:bg-purple-700 transition">
+                  🤖 Get AI Productivity Report
+                </button>
+                <button className="w-full bg-orange-600 p-3 rounded-lg text-left hover:bg-orange-700 transition">
+                  📱 Switch to Mobile Mode
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+
+        {/* Development Progress */}
+        <div className="mt-8 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-2">🚀 Life OS Evolution Progress</h3>
+          <p className="text-blue-100 mb-4">Phase 1: Intelligence Foundation → Tesla-Style UI Implementation</p>
+          <div className="bg-white bg-opacity-20 rounded-full h-2 mb-2">
+            <div className="bg-white rounded-full h-2 w-4/5"></div>
+          </div>
+          <p className="text-sm text-blue-100">AI Integration ✅ • Tesla UI ✅ • Predictive Analytics in progress</p>
+        </div>
+      </div>
     </div>
   );
 }

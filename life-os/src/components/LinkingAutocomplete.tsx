@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useData, Case, Contact } from '../lib/dataContext';
+import { useAIEnhancedData } from '../lib/ai/enhanced-data-context';
+import { EnhancedCase as Case, EnhancedContact as Contact } from '../lib/ai/enhanced-storage';
 
 interface LinkingAutocompleteProps {
   type: 'cases' | 'contacts';
@@ -18,7 +19,7 @@ export function LinkingAutocomplete({
   placeholder,
   className = ""
 }: LinkingAutocompleteProps) {
-  const { cases, contacts, addCase, addContact } = useData();
+  const { cases, contacts, addCase, addContact } = useAIEnhancedData();
   const [inputValue, setInputValue] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredItems, setFilteredItems] = useState<(Case | Contact)[]>([]);
@@ -33,11 +34,11 @@ export function LinkingAutocomplete({
         
         if (type === 'cases') {
           const caseItem = item as Case;
-          const searchText = `${caseItem.title} ${caseItem.client_name} ${caseItem.case_number || ''}`.toLowerCase();
+          const searchText = `${caseItem.title} ${caseItem.client_name}`.toLowerCase();
           return searchText.includes(inputValue.toLowerCase());
         } else {
           const contactItem = item as Contact;
-          const searchText = `${contactItem.first_name} ${contactItem.last_name} ${contactItem.firm_organization || ''}`.toLowerCase();
+          const searchText = `${contactItem.first_name} ${contactItem.last_name}`.toLowerCase();
           return searchText.includes(inputValue.toLowerCase());
         }
       });
@@ -85,7 +86,7 @@ export function LinkingAutocomplete({
     }
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
     if (!inputValue.trim()) return;
 
     if (type === 'cases') {
@@ -95,12 +96,10 @@ export function LinkingAutocomplete({
         client_name: inputValue.trim().split(' vs. ')[0] || inputValue.trim(),
         description: `Case created from linking: ${inputValue.trim()}`,
         case_type: 'litigation' as const,
-        status: 'active' as const,
-        priority: 'medium' as const,
-        opened_date: new Date().toISOString().split('T')[0]
+        status: 'active' as const
       };
       
-      const newCaseId = addCase(newCaseData);
+      const newCaseId = await addCase(newCaseData);
       onSelectionChange([...selectedIds, newCaseId]);
     } else {
       // Create new contact
@@ -114,9 +113,7 @@ export function LinkingAutocomplete({
           first_name: firstName,
           last_name: lastName,
           email: '',
-          phone: '',
-          firm_organization: '',
-          notes: ''
+          phone: ''
         };
         
         const newContactId = addContact(newContactData);
@@ -157,10 +154,10 @@ export function LinkingAutocomplete({
   const getItemSubtext = (item: Case | Contact) => {
     if (type === 'cases') {
       const caseItem = item as Case;
-      return `${caseItem.case_number ? `#${caseItem.case_number} • ` : ''}${caseItem.status}`;
+      return caseItem.status;
     } else {
       const contactItem = item as Contact;
-      return contactItem.firm_organization || contactItem.type;
+      return contactItem.type;
     }
   };
 

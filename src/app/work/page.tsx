@@ -183,6 +183,56 @@ export default function WorkPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* MCLE Summary */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700 mb-8">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">MCLE Requirements Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Nevada Requirements */}
+            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+              <h3 className="font-medium text-slate-900 dark:text-white mb-3">Nevada</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-300">Hours needed this period:</span>
+                  <span className="font-medium text-slate-900 dark:text-white">10 hours</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-300">Days remaining in period:</span>
+                  <span className="font-medium text-orange-600">245 days</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  Period: July 1, 2024 - June 30, 2027
+                </div>
+              </div>
+            </div>
+
+            {/* California Requirements */}
+            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+              <h3 className="font-medium text-slate-900 dark:text-white mb-3">California</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-300">Hours needed this period:</span>
+                  <span className="font-medium text-slate-900 dark:text-white">25 hours</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-300">Days remaining in period:</span>
+                  <span className="font-medium text-red-600">245 days</span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  Period: February 1, 2025 - January 31, 2028
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Need Info Section */}
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-8">
+          <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">Need Info</h3>
+          <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+            <li>• No tasks</li>
+          </ul>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">

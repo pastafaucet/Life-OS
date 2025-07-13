@@ -2,8 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useData, Case as DataCase, Contact as DataContact } from '../../lib/dataContext';
-import { LinkingAutocomplete } from '../../components/LinkingAutocomplete';
+import { useAIEnhancedData } from '../../lib/ai/enhanced-data-context';
+import { 
+  TeslaSmartCaseManager,
+  TeslaCaseMilestoneTracker,
+  TeslaDocumentManagement,
+  TeslaCommunicationPlatforms,
+  TeslaCrossModuleIntelligence,
+  TeslaSmartSuggestions,
+  TeslaEfficiencyAlerts
+} from '../../components/TeslaUI';
 
 interface Case {
   id: string;
@@ -217,21 +225,21 @@ function PeopleAutocomplete({ contacts, selectedContactIds, onContactsChange, on
 }
 
 export default function LegalPage() {
-  const { cases: dataCases, contacts: dataContacts, tasks: dataTasks, addCase, addContact, updateCase, updateContact, updateTask, deleteCase, deleteContact, getCaseById } = useData();
+  const { cases: dataCases, contacts: dataContacts, tasks: dataTasks, addCase, addContact, updateCase, updateContact, updateTask, deleteCase, deleteContact, getCaseById } = useAIEnhancedData();
   
   // Convert DataContext cases to local Case interface
   const cases: Case[] = dataCases.map(c => ({
     id: c.id,
     case_name: c.title,
     case_summary: c.description || '',
-    case_number: c.case_number || '',
-    court: '', // TODO: Add court field to DataContext
-    judge: '', // TODO: Add judge field to DataContext  
+    case_number: '', // EnhancedCase doesn't have case_number yet
+    court: '', // TODO: Add court field to EnhancedCase
+    judge: '', // TODO: Add judge field to EnhancedCase  
     status: c.status === 'active' ? 'Active' : 'Closed',
     created_at: new Date(c.created_at),
     updated_at: new Date(c.updated_at),
-    contact_ids: c.contact_ids || [],
-    task_ids: c.task_ids || []
+    contact_ids: [], // EnhancedCase doesn't have contact_ids yet - derive from contacts that reference this case
+    task_ids: [] // EnhancedCase doesn't have task_ids yet - derive from tasks that reference this case
   }));
   
   // Convert DataContext contacts to local Contact interface  
@@ -240,7 +248,7 @@ export default function LegalPage() {
     first_name: c.first_name,
     last_name: c.last_name,
     contact_type: c.type === 'client' ? 'client' : 'opposing_counsel', // Map from DataContext type
-    case_ids: c.case_ids || [], // Use the case_ids from DataContext
+    case_ids: [], // EnhancedContact doesn't have case_ids yet - will need to implement relationships
     created_at: new Date(c.created_at),
     updated_at: new Date(c.updated_at)
   }));
@@ -597,8 +605,8 @@ export default function LegalPage() {
 
       <div className="px-6 py-6">
         <div className="flex gap-6">
-          {/* Left Column - Cases Display (75%) */}
-          <div className="flex-1" style={{ flexBasis: '75%' }}>
+          {/* Left Column - Cases Display (45%) */}
+          <div className="flex-1" style={{ flexBasis: '45%' }}>
             {/* View Mode Tabs */}
             <div className="mb-6">
               <div className="flex gap-2 flex-wrap">
@@ -694,25 +702,25 @@ export default function LegalPage() {
                     </div>
                   ) : activeView === 'contacts-cards' ? (
                     /* Contacts Card View */
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                       {getSortedContacts().map((contact) => (
                         <div 
                           key={contact.id}
-                          className="bg-gray-800 rounded-lg shadow-md p-4 cursor-pointer hover:bg-gray-750 transition-colors h-fit relative group"
+                          className="bg-gray-800 rounded-lg shadow-md p-4 cursor-pointer hover:bg-gray-750 transition-colors h-fit relative group min-w-0"
                           onClick={() => handleEditContact(contact)}
                         >
                           
-                          <div className="mb-3">
-                            <h3 className="text-lg font-semibold text-white mb-1 pr-8">
+                          <div className="mb-3 min-w-0">
+                            <h3 className="text-lg font-semibold text-white mb-1 pr-8 truncate">
                               {contact.first_name} {contact.last_name}
                             </h3>
-                            <p className="text-purple-400 text-sm font-medium mb-2">
+                            <p className="text-purple-400 text-sm font-medium mb-2 break-words">
                               {getContactTypeDisplay(contact.contact_type)}
                             </p>
                           </div>
                           
-                          <div className="text-gray-300 text-sm">
-                            <span className="font-medium">
+                          <div className="text-gray-300 text-sm min-w-0">
+                            <span className="font-medium block truncate">
                               {contact.case_ids.length} case{contact.case_ids.length !== 1 ? 's' : ''}
                             </span>
                           </div>
@@ -728,18 +736,18 @@ export default function LegalPage() {
                           className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-750 transition-colors group"
                           onClick={() => handleEditContact(contact)}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-lg font-semibold text-white">
+                          <div className="flex items-start justify-between min-w-0">
+                            <div className="flex-1 min-w-0 pr-4">
+                              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                <h3 className="text-lg font-semibold text-white truncate">
                                   {contact.first_name} {contact.last_name}
                                 </h3>
-                                <span className="text-purple-400 text-sm font-medium">
+                                <span className="text-purple-400 text-sm font-medium flex-shrink-0">
                                   {getContactTypeDisplay(contact.contact_type)}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <div className="text-gray-300 text-sm font-medium">
+                              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                <div className="text-gray-300 text-sm font-medium flex-shrink-0">
                                   {contact.case_ids.length} case{contact.case_ids.length !== 1 ? 's' : ''}
                                 </div>
                                 {contact.case_ids.map((caseId) => (
@@ -750,7 +758,7 @@ export default function LegalPage() {
                                       // Navigate to case - placeholder for now
                                       console.log('Navigate to case:', caseId);
                                     }}
-                                    className="text-blue-400 hover:text-blue-300 text-sm underline"
+                                    className="text-blue-400 hover:text-blue-300 text-sm underline truncate max-w-32"
                                   >
                                     {getCaseNameById(caseId)}
                                   </button>
@@ -799,12 +807,12 @@ export default function LegalPage() {
                                     className="px-4 py-3 border-b border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-750 transition-colors"
                                     onClick={() => handleEditContact(contact)}
                                   >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex-1">
-                                        <h4 className="text-white font-medium mb-1">
+                                    <div className="flex items-start justify-between min-w-0">
+                                      <div className="flex-1 min-w-0 pr-4">
+                                        <h4 className="text-white font-medium mb-1 truncate">
                                           {contact.first_name} {contact.last_name}
                                         </h4>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-2 min-w-0">
                                           {contact.case_ids.map((caseId) => (
                                             <button
                                               key={caseId}
@@ -813,14 +821,14 @@ export default function LegalPage() {
                                                 // Navigate to case - placeholder for now
                                                 console.log('Navigate to case:', caseId);
                                               }}
-                                              className="text-blue-400 hover:text-blue-300 text-sm underline"
+                                              className="text-blue-400 hover:text-blue-300 text-sm underline truncate max-w-32 flex-shrink-0"
                                             >
                                               {getCaseNameById(caseId)}
                                             </button>
                                           ))}
                                         </div>
                                       </div>
-                                      <div className="text-gray-300 text-sm font-medium">
+                                      <div className="text-gray-300 text-sm font-medium flex-shrink-0 ml-2">
                                         {contact.case_ids.length} case{contact.case_ids.length !== 1 ? 's' : ''}
                                       </div>
                                     </div>
@@ -835,7 +843,7 @@ export default function LegalPage() {
                   )}
                 </>
               ) : (
-                /* Cases Views */
+                /* Tesla Enhanced Cases Views */
                 <>
                   {filteredCases.length === 0 ? (
                     <div className="bg-gray-800 rounded-lg shadow-md p-8 text-center">
@@ -862,69 +870,41 @@ export default function LegalPage() {
                         </button>
                       )}
                     </div>
-                  ) : activeView === 'active-list' ? (
-                    /* List View */
-                    <div className="space-y-2">
-                      {filteredCases.map((caseItem) => (
-                        <div 
-                          key={caseItem.id}
-                          className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-750 transition-colors group"
-                          onClick={() => handleEditCase(caseItem)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-semibold text-white">{caseItem.case_name}</h3>
-                                {caseItem.case_summary && (
-                                  <span className="text-gray-400 text-sm">— {caseItem.case_summary}</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 ml-4">
-                              {caseNeedsInfo(caseItem) && (
-                                <span className="text-red-400 text-xs font-medium">Case Info Needed</span>
-                              )}
-                              {caseHasNoTasks(caseItem) && (
-                                <span className="text-purple-400 text-xs font-medium">No Current Task</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   ) : (
-                    /* Card View - Grid Layout */
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                      {filteredCases.map((caseItem) => (
-                        <div 
-                          key={caseItem.id}
-                          className="bg-gray-800 rounded-lg shadow-md p-4 cursor-pointer hover:bg-gray-750 transition-colors h-fit relative group"
-                          onClick={() => handleEditCase(caseItem)}
-                        >
-                          
-                          <div className="mb-3">
-                            <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2 pr-8">{caseItem.case_name}</h3>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex flex-col gap-1">
-                              {caseNeedsInfo(caseItem) && (
-                                <span className="text-red-400 text-xs font-medium">Case Info Needed</span>
-                              )}
-                              {caseHasNoTasks(caseItem) && (
-                                <span className="text-purple-400 text-xs font-medium">No Current Task</span>
-                              )}
-                              
-                              {/* Contact count - only show if there are contacts */}
-                              {caseItem.contact_ids && caseItem.contact_ids.length > 0 && (
-                                <span className="text-blue-400 text-xs font-medium">
-                                  {caseItem.contact_ids.length} contact{caseItem.contact_ids.length !== 1 ? 's' : ''}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    /* Tesla Smart Case Manager - Replaces all case views */
+                    <div className="space-y-6">
+                      {/* Tesla Efficiency Alerts */}
+                      <TeslaEfficiencyAlerts />
+                      
+                      {/* Main Tesla Smart Case Manager */}
+                      <TeslaSmartCaseManager 
+                        cases={filteredCases.map(caseItem => ({
+                          id: caseItem.id,
+                          case_name: caseItem.case_name,
+                          case_summary: caseItem.case_summary,
+                          case_number: caseItem.case_number,
+                          court: caseItem.court,
+                          judge: caseItem.judge,
+                          status: caseItem.status,
+                          priority: 'Medium' as const, // Default priority
+                          created_at: caseItem.created_at,
+                          updated_at: caseItem.updated_at,
+                          contact_ids: caseItem.contact_ids,
+                          task_ids: caseItem.task_ids,
+                          total_tasks: getTasksForCase(caseItem.id).length,
+                          completed_tasks: getTasksForCase(caseItem.id).filter(task => task.status === 'done').length,
+                          ai_insights: [
+                            caseNeedsInfo(caseItem) ? 'Missing case information' : 'Case information complete',
+                            caseHasNoTasks(caseItem) ? 'No linked tasks' : `${getTasksForCase(caseItem.id).length} linked tasks`
+                          ]
+                        }))}
+                        contacts={contacts}
+                      />
+                      
+                      {/* Tesla Case Milestone Tracker */}
+                      {filteredCases.length > 0 && (
+                        <TeslaCaseMilestoneTracker caseId={filteredCases[0]?.id} />
+                      )}
                     </div>
                   )}
                 </>
@@ -932,8 +912,210 @@ export default function LegalPage() {
             </div>
           </div>
 
-          {/* Right Column - Context Panel (25%) */}
-          <div className="w-80 flex-shrink-0">
+          {/* Right Column - Tesla Enhanced Context Panel (60%) */}
+          <div className="w-[48rem] flex-shrink-0 space-y-6">
+            {/* Tesla Cross-Module Intelligence */}
+            <div className="bg-gray-800 rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Cross-Module Intelligence</h3>
+              <TeslaCrossModuleIntelligence 
+                entities={[
+                  // Convert cases to entities
+                  ...cases.map(caseItem => ({
+                    id: caseItem.id,
+                    type: 'case' as const,
+                    title: caseItem.case_name,
+                    description: caseItem.case_summary,
+                    status: caseItem.status === 'Active' ? 'active' as const : 'completed' as const,
+                    priority: caseNeedsInfo(caseItem) ? 'high' as const : 'medium' as const,
+                    module: 'legal' as const,
+                    connections: [],
+                    ai_insights: [
+                      caseNeedsInfo(caseItem) ? 'Missing case information' : 'Case information complete',
+                      caseHasNoTasks(caseItem) ? 'No linked tasks' : `${getTasksForCase(caseItem.id).length} linked tasks`
+                    ],
+                    last_accessed: new Date()
+                  })),
+                  // Convert contacts to entities
+                  ...contacts.map(contact => ({
+                    id: contact.id,
+                    type: 'contact' as const,
+                    title: `${contact.first_name} ${contact.last_name}`,
+                    description: `${getContactTypeDisplay(contact.contact_type)} - ${contact.case_ids.length} cases`,
+                    status: 'active' as const,
+                    priority: contact.case_ids.length > 2 ? 'high' as const : 'medium' as const,
+                    module: 'contacts' as const,
+                    connections: [],
+                    ai_insights: [
+                      `Connected to ${contact.case_ids.length} case${contact.case_ids.length !== 1 ? 's' : ''}`,
+                      contact.contact_type === 'client' ? 'Primary stakeholder' : 'Supporting role'
+                    ],
+                    last_accessed: new Date()
+                  })),
+                  // Convert related tasks to entities
+                  ...dataTasks
+                    .filter(task => task.case_ids && task.case_ids.length > 0)
+                    .map(task => ({
+                      id: task.id,
+                      type: 'task' as const,
+                      title: task.title,
+                      description: task.description || 'Task in progress',
+                      status: task.status === 'done' ? 'completed' as const : 'pending' as const,
+                      priority: task.priority as 'low' | 'medium' | 'high' | 'critical',
+                      module: 'tasks' as const,
+                      connections: [],
+                      ai_insights: [
+                        `Linked to ${task.case_ids?.length || 0} case${(task.case_ids?.length || 0) !== 1 ? 's' : ''}`,
+                        task.due_date ? `Due: ${task.due_date}` : 'No due date set'
+                      ],
+                      last_accessed: new Date()
+                    }))
+                ]}
+                connections={[
+                  // Generate connections between cases and contacts
+                  ...cases.flatMap(caseItem => 
+                    (caseItem.contact_ids || []).map(contactId => ({
+                      id: `${caseItem.id}-${contactId}`,
+                      source_entity: 'case',
+                      source_id: caseItem.id,
+                      target_entity: 'contact',
+                      target_id: contactId,
+                      connection_type: 'related' as const,
+                      strength: 85,
+                      confidence: 95,
+                      auto_detected: true,
+                      created_at: new Date(),
+                      updated_at: new Date()
+                    }))
+                  ),
+                  // Generate connections between cases and tasks
+                  ...dataTasks
+                    .filter(task => task.case_ids && task.case_ids.length > 0)
+                    .flatMap(task => 
+                      (task.case_ids || []).map(caseId => ({
+                        id: `${caseId}-${task.id}`,
+                        source_entity: 'case',
+                        source_id: caseId,
+                        target_entity: 'task',
+                        target_id: task.id,
+                        connection_type: 'dependent' as const,
+                        strength: 90,
+                        confidence: 90,
+                        auto_detected: true,
+                        created_at: new Date(),
+                        updated_at: new Date()
+                      }))
+                    )
+                ]}
+                insights={[
+                  // Generate case-related insights
+                  {
+                    id: 'legal-insight-1',
+                    type: 'opportunity' as const,
+                    title: 'Case Information Gaps',
+                    description: `${cases.filter(c => caseNeedsInfo(c)).length} cases missing critical information (case number, court, or judge)`,
+                    affected_entities: cases.filter(c => caseNeedsInfo(c)).map(c => c.id),
+                    confidence: 95,
+                    impact: 'high' as const,
+                    actionable: true,
+                    actions: ['Complete missing case details', 'Set up case information reminders', 'Review case documentation'],
+                    priority: 'high' as const
+                  },
+                  {
+                    id: 'legal-insight-2',
+                    type: 'pattern' as const,
+                    title: 'Task Integration Opportunity',
+                    description: `${cases.filter(c => caseHasNoTasks(c)).length} cases have no linked tasks, which may indicate missing workflow setup`,
+                    affected_entities: cases.filter(c => caseHasNoTasks(c)).map(c => c.id),
+                    confidence: 78,
+                    impact: 'medium' as const,
+                    actionable: true,
+                    actions: ['Create tasks for case milestones', 'Set up case workflow templates', 'Link existing tasks to cases'],
+                    priority: 'medium' as const
+                  },
+                  {
+                    id: 'legal-insight-3',
+                    type: 'recommendation' as const,
+                    title: 'Contact Relationship Optimization',
+                    description: `Strong contact-case relationships detected. Consider leveraging these connections for case strategy`,
+                    affected_entities: contacts.filter(c => c.case_ids.length > 1).map(c => c.id),
+                    confidence: 82,
+                    impact: 'medium' as const,
+                    actionable: true,
+                    actions: ['Review multi-case contacts', 'Identify collaboration opportunities', 'Strengthen key relationships'],
+                    priority: 'low' as const
+                  }
+                ].filter(insight => insight.affected_entities.length > 0)}
+              />
+            </div>
+            
+            {/* Tesla Smart Suggestions */}
+            <div className="bg-gray-800 rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Smart Suggestions</h3>
+              <TeslaSmartSuggestions 
+                suggestions={[
+                  // Legal-specific suggestions
+                  {
+                    id: 'legal-suggestion-1',
+                    type: 'productivity',
+                    priority: cases.filter(c => caseNeedsInfo(c)).length > 0 ? 'high' : 'medium',
+                    title: 'Complete Case Information',
+                    description: `${cases.filter(c => caseNeedsInfo(c)).length} cases need additional details. Complete case numbers, court assignments, and judge information for better organization.`,
+                    context: 'Case management analysis',
+                    confidence: 92,
+                    potential_impact: 'high',
+                    time_to_implement: '15 minutes per case',
+                    action_items: [
+                      'Review cases missing information',
+                      'Gather case numbers from court records',
+                      'Assign appropriate courts and judges',
+                      'Update case files with complete information'
+                    ],
+                    related_items: cases.filter(c => caseNeedsInfo(c)).map(c => c.case_name).slice(0, 3),
+                    dismissible: true
+                  },
+                  {
+                    id: 'legal-suggestion-2',
+                    type: 'automation',
+                    priority: 'medium',
+                    title: 'Link Tasks to Cases',
+                    description: 'Set up automatic task creation when new cases are opened. This ensures consistent workflow and nothing falls through the cracks.',
+                    context: 'Workflow optimization',
+                    confidence: 88,
+                    potential_impact: 'high',
+                    time_to_implement: '20 minutes setup',
+                    action_items: [
+                      'Create case milestone templates',
+                      'Set up automatic task generation',
+                      'Link existing tasks to relevant cases',
+                      'Configure deadline reminders'
+                    ],
+                    related_items: ['Task Management', 'Case Workflow'],
+                    dismissible: true
+                  },
+                  {
+                    id: 'legal-suggestion-3',
+                    type: 'relationship',
+                    priority: 'low',
+                    title: 'Strengthen Contact Networks',
+                    description: `You have ${contacts.filter(c => c.case_ids.length > 1).length} contacts involved in multiple cases. Consider leveraging these relationships for referrals or collaboration.`,
+                    context: 'Relationship analysis',
+                    confidence: 75,
+                    potential_impact: 'medium',
+                    time_to_implement: '30 minutes',
+                    action_items: [
+                      'Review multi-case contacts',
+                      'Schedule relationship check-ins',
+                      'Identify referral opportunities',
+                      'Update contact interaction logs'
+                    ],
+                    related_items: contacts.filter(c => c.case_ids.length > 1).map(c => `${c.first_name} ${c.last_name}`).slice(0, 3),
+                    dismissible: true
+                  }
+                ]}
+                contextualMode={true}
+              />
+            </div>
+            
             <div className="bg-gray-800 rounded-lg shadow-md p-6 sticky top-6">
               <h3 className="text-lg font-semibold text-white mb-4">Legal Overview</h3>
               

@@ -78,6 +78,34 @@ export interface WorkSession {
   updated_at: string;
 }
 
+export interface Contact {
+  id: string;
+  type: 'client' | 'opposing_counsel' | 'judge' | 'expert' | 'referral' | 'co_counsel' | 'other';
+  first_name: string;
+  last_name: string;
+  title?: string;
+  firm_organization?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  bar_number?: string;
+  jurisdiction?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContactInteraction {
+  id: string;
+  contact_id: string;
+  case_id?: string;
+  interaction_type: 'meeting' | 'call' | 'email' | 'court' | 'other';
+  date: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Context interface
 interface DataContextType {
   // Data
@@ -86,6 +114,8 @@ interface DataContextType {
   tasks: Task[];
   goals: Goal[];
   sessions: WorkSession[];
+  contacts: Contact[];
+  contactInteractions: ContactInteraction[];
   
   // Cases
   addCase: (caseData: Omit<Case, 'id' | 'created_at' | 'updated_at'>) => void;
@@ -112,11 +142,22 @@ interface DataContextType {
   updateSession: (id: string, updates: Partial<WorkSession>) => void;
   deleteSession: (id: string) => void;
   
+  // Contacts
+  addContact: (contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at'>) => void;
+  updateContact: (id: string, updates: Partial<Contact>) => void;
+  deleteContact: (id: string) => void;
+  
+  // Contact Interactions
+  addContactInteraction: (interactionData: Omit<ContactInteraction, 'id' | 'created_at' | 'updated_at'>) => void;
+  updateContactInteraction: (id: string, updates: Partial<ContactInteraction>) => void;
+  deleteContactInteraction: (id: string) => void;
+  
   // Helper functions
   getCaseById: (id: string) => Case | undefined;
   getProjectById: (id: string) => Project | undefined;
   getTaskById: (id: string) => Task | undefined;
   getGoalById: (id: string) => Goal | undefined;
+  getContactById: (id: string) => Contact | undefined;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -271,6 +312,72 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return [];
   });
 
+  const [contacts, setContacts] = useState<Contact[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('lifeos-contacts');
+      if (saved) {
+        return JSON.parse(saved);
+      } else {
+        // Add sample contacts if none exist
+        const sampleContacts: Contact[] = [
+          {
+            id: '1',
+            type: 'client',
+            first_name: 'John',
+            last_name: 'Smith',
+            title: 'CEO',
+            firm_organization: 'Smith Enterprises',
+            email: 'john.smith@smithenterprises.com',
+            phone: '(555) 123-4567',
+            address: '123 Business Ave, Suite 100, Las Vegas, NV 89101',
+            notes: 'Primary contact for contract dispute case',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: '2',
+            type: 'opposing_counsel',
+            first_name: 'Sarah',
+            last_name: 'Johnson',
+            title: 'Partner',
+            firm_organization: 'Johnson & Associates',
+            email: 'sarah.johnson@johnsonlaw.com',
+            phone: '(555) 987-6543',
+            bar_number: 'NV12345',
+            jurisdiction: 'Nevada',
+            notes: 'Opposing counsel in Smith vs. Johnson case',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: '3',
+            type: 'judge',
+            first_name: 'Robert',
+            last_name: 'Williams',
+            title: 'Judge',
+            firm_organization: 'Clark County District Court',
+            email: 'chambers@clarkcounty.gov',
+            phone: '(702) 671-4000',
+            jurisdiction: 'Nevada',
+            notes: 'Assigned judge for civil litigation matters',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ];
+        return sampleContacts;
+      }
+    }
+    return [];
+  });
+
+  const [contactInteractions, setContactInteractions] = useState<ContactInteraction[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('lifeos-contact-interactions');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
   // Save to localStorage whenever state changes
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -301,6 +408,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('lifeos-sessions', JSON.stringify(sessions));
     }
   }, [sessions]);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lifeos-contacts', JSON.stringify(contacts));
+    }
+  }, [contacts]);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lifeos-contact-interactions', JSON.stringify(contactInteractions));
+    }
+  }, [contactInteractions]);
 
   // Case functions
   const addCase = (caseData: Omit<Case, 'id' | 'created_at' | 'updated_at'>) => {
@@ -435,11 +554,60 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setSessions(prev => prev.filter(session => session.id !== id));
   };
 
+  // Contact functions
+  const addContact = (contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at'>) => {
+    const newContact: Contact = {
+      ...contactData,
+      id: Date.now().toString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    setContacts(prev => [newContact, ...prev]);
+  };
+
+  const updateContact = (id: string, updates: Partial<Contact>) => {
+    setContacts(prev => prev.map(contact => 
+      contact.id === id 
+        ? { ...contact, ...updates, updated_at: new Date().toISOString() }
+        : contact
+    ));
+  };
+
+  const deleteContact = (id: string) => {
+    setContacts(prev => prev.filter(contact => contact.id !== id));
+    // Also remove related interactions
+    setContactInteractions(prev => prev.filter(interaction => interaction.contact_id !== id));
+  };
+
+  // Contact Interaction functions
+  const addContactInteraction = (interactionData: Omit<ContactInteraction, 'id' | 'created_at' | 'updated_at'>) => {
+    const newInteraction: ContactInteraction = {
+      ...interactionData,
+      id: Date.now().toString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    setContactInteractions(prev => [newInteraction, ...prev]);
+  };
+
+  const updateContactInteraction = (id: string, updates: Partial<ContactInteraction>) => {
+    setContactInteractions(prev => prev.map(interaction => 
+      interaction.id === id 
+        ? { ...interaction, ...updates, updated_at: new Date().toISOString() }
+        : interaction
+    ));
+  };
+
+  const deleteContactInteraction = (id: string) => {
+    setContactInteractions(prev => prev.filter(interaction => interaction.id !== id));
+  };
+
   // Helper functions
   const getCaseById = (id: string) => cases.find(case_ => case_.id === id);
   const getProjectById = (id: string) => projects.find(project => project.id === id);
   const getTaskById = (id: string) => tasks.find(task => task.id === id);
   const getGoalById = (id: string) => goals.find(goal => goal.id === id);
+  const getContactById = (id: string) => contacts.find(contact => contact.id === id);
 
   const value: DataContextType = {
     // Data
@@ -448,6 +616,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     tasks,
     goals,
     sessions,
+    contacts,
+    contactInteractions,
     
     // Cases
     addCase,
@@ -474,11 +644,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateSession,
     deleteSession,
     
+    // Contacts
+    addContact,
+    updateContact,
+    deleteContact,
+    
+    // Contact Interactions
+    addContactInteraction,
+    updateContactInteraction,
+    deleteContactInteraction,
+    
     // Helpers
     getCaseById,
     getProjectById,
     getTaskById,
-    getGoalById
+    getGoalById,
+    getContactById
   };
 
   return (

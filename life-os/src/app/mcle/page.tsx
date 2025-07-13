@@ -281,9 +281,9 @@ export default function MCLEPage() {
         </div>
 
         {/* Main Content Layout - Sidebar Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Courses List - Takes up 3/4 of the space */}
-          <div className="lg:col-span-3">
+        <div className="flex gap-6">
+          {/* Courses List - Takes up majority of the space */}
+          <div className="flex-1">
             <div className="bg-gray-800 rounded-lg shadow-md">
               <div className="p-6 border-b border-gray-700">
                 <h3 className="text-xl font-semibold text-white">
@@ -383,8 +383,8 @@ export default function MCLEPage() {
             </div>
           </div>
 
-          {/* Progress Trackers Sidebar - Takes up 1/4 of the space */}
-          <div className="lg:col-span-1 space-y-6">
+          {/* Progress Trackers Sidebar - Same width as legal page */}
+          <div className="w-80 flex-shrink-0 space-y-4">
             {/* California Requirements */}
             <div className="bg-gray-800 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-white mb-3">California Requirements</h3>
@@ -513,36 +513,45 @@ export default function MCLEPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Navigation Buttons - Bottom Right (Same as Legal Cases page) */}
-        <div className="fixed bottom-6 right-6 bg-gray-800 rounded-lg shadow-md p-4">
-          <div className="space-y-2">
-            <Link 
-              href="/legal"
-              className="block w-full text-left px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 rounded-md text-white transition-colors font-medium"
-            >
-              Cases
-            </Link>
-            <button 
-              className="w-full text-left px-3 py-2 text-sm bg-green-600 hover:bg-green-700 rounded-md text-white transition-colors font-medium"
-              disabled
-            >
-              MCLE Tracking
-            </button>
-            <button 
-              className="w-full text-left px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300 transition-colors"
-              disabled
-            >
-              Work Contacts (Coming Soon)
-            </button>
-            <button 
-              className="w-full text-left px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300 transition-colors"
-              disabled
-            >
-              Work Notes (Coming Soon)
-            </button>
+            {/* Navigation Buttons - Positioned directly below requirements */}
+            <div className="bg-gray-800 rounded-lg shadow-md p-3">
+              <div className="space-y-2">
+                <Link 
+                  href="/legal"
+                  className="block w-full text-center px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 rounded-md text-white transition-colors font-medium"
+                >
+                  Cases
+                </Link>
+                <button 
+                  className="w-full text-center px-3 py-2 text-sm bg-green-600 hover:bg-green-700 rounded-md text-white transition-colors font-medium"
+                >
+                  MCLE Tracking
+                </button>
+                <Link 
+                  href="/legal"
+                  onClick={() => {
+                    // Navigate to legal page and switch to contacts view
+                    window.location.href = '/legal';
+                    setTimeout(() => {
+                      const contactsButton = document.querySelector('[data-view="contacts-cards"]');
+                      if (contactsButton) {
+                        (contactsButton as HTMLElement).click();
+                      }
+                    }, 100);
+                  }}
+                  className="block w-full text-center px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 rounded-md text-white transition-colors font-medium"
+                >
+                  Work Contacts
+                </Link>
+                <Link 
+                  href="/work"
+                  className="block w-full text-center px-3 py-2 text-sm bg-orange-600 hover:bg-orange-700 rounded-md text-white transition-colors font-medium"
+                >
+                  Work Sessions
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
